@@ -8,8 +8,10 @@ dotenv.config();
 const port = process.env.PORT || 8000;
 
 connectDB()
-  .then(() => {
-    console.log("Database connected");
+  .then((dbConnected) => {
+    if (dbConnected) {
+      console.log("Database connected");
+    }
     const server = app.listen(port, () => {
       console.log(`Server listening on port ${port}`);
     });
@@ -23,8 +25,10 @@ connectDB()
 
     io.on("connection", (socket) => {
       console.log("Connected to socket");
+      let userData;
 
-      socket.on("setup", (userData) => {
+      socket.on("setup", (data) => {
+        userData = data;
         console.log("Connected to socket in setup: ", userData.username);
         socket.join(userData._id);
         socket.emit("connected");
@@ -44,15 +48,16 @@ connectDB()
         chat.users.forEach((user) => {
           // console.log("User: ", user);
           if (user._id === newMessage.sender._id) return;
-          io.to(user._id).emit("message recieved", newMessage);
+          io.to(user._id).emit("message received", newMessage);
           console.log("Message sent to: ", user._id);
         });
       });
 
-      socket.off("setup", () => {
+      socket.on("disconnect", () => {
         console.log("Disconnected from socket");
-        console.log("Disconnected from socket");
-        socket.leave(userData._id);
+        if (userData) {
+          socket.leave(userData._id);
+        }
       });
     });
   })
